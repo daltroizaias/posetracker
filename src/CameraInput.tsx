@@ -48,6 +48,8 @@ const CameraInput: React.FC<CameraInputProps> = ({ children }) => {
             transform: 'scaleX(-1)', // espelha horizontalmente
             width: 640,
             height: 480,
+            alignItems: 'center',
+            justifyContent: 'center',
             position: 'absolute',
             top: 0,
             left: 0,
