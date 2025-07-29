@@ -1,18 +1,57 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback } from "react";
 import {
   PoseLandmarker,
   FilesetResolver,
   DrawingUtils,
-  PoseLandmarkerResult // Importe para tipagem mais clara
-} from '@mediapipe/tasks-vision';
+  PoseLandmarkerResult, // Importe para tipagem mais clara
+} from "@mediapipe/tasks-vision";
+import { getNamedLandmarks3D } from "./PositionLandMarks";
+import styled from "styled-components";
 
 interface PoseTrackerProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
+const Wrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+`;
+
+const CanvasWrapper = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  margin: 0 auto;
+  max-width: 100%;
+  max-height: 100%;
+
+  /* Mantém a proporção 16:9 mas permite altura máxima */
+  aspect-ratio: 16/9;
+
+  @media (max-width: 768px) {
+    /* Em mobile, usa toda a altura disponível */
+    aspect-ratio: unset;
+    max-height: 85vh;
+  }
+`;
+
+const Canvas = styled.canvas`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+`;
+
 // Caminho para o arquivo do modelo. Certifique-se de que ele esteja em public/models/
 // Ex: public/models/pose_landmarker_full.task
-const MODEL_FILE = '/models/pose_landmarker_full.task'; //
+const MODEL_FILE = "/models/pose_landmarker_full.task"; //
 
 const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -28,24 +67,27 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
       // O FilesetResolver precisa do caminho para a pasta onde vision_wasm_internal.js e .wasm estão.
       // Use o CDN para maior robustez, ou '/models/' se você copiou os arquivos localmente.
       const filesetResolver = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm' //
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm" //
         // OU: '/models/' se você copiou os arquivos WASM para public/models/
       );
 
-      const landmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
-        baseOptions: {
-          modelAssetPath: MODEL_FILE, //
-          delegate: 'GPU' // 'GPU' para melhor desempenho, 'CPU' como fallback
-        },
-        runningMode: 'VIDEO', //
-        numPoses: 1 //
-      });
+      const landmarker = await PoseLandmarker.createFromOptions(
+        filesetResolver,
+        {
+          baseOptions: {
+            modelAssetPath: MODEL_FILE, //
+            delegate: "GPU", // 'GPU' para melhor desempenho, 'CPU' como fallback
+          },
+          runningMode: "VIDEO", //
+          numPoses: 1, //
+        }
+      );
 
       poseLandmarkerRef.current = landmarker;
-      console.log('PoseLandmarker criado com sucesso.');
+      console.log("PoseLandmarker criado com sucesso.");
       // Não chame startDetection aqui, pois ele será chamado no useEffect do loop.
     } catch (error) {
-      console.error('Erro ao criar PoseLandmarker:', error); //
+      console.error("Erro ao criar PoseLandmarker:", error); //
       // Considere exibir uma mensagem de erro na UI
     }
   }, []); // createLandmarker não tem dependências que mudem
@@ -62,14 +104,17 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
     }
 
     // Garante que o canvas tem as mesmas dimensões do vídeo
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    if (
+      canvas.width !== video.videoWidth ||
+      canvas.height !== video.videoHeight
+    ) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
     }
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) {
-      console.error('Não foi possível obter o contexto 2D do canvas.');
+      console.error("Não foi possível obter o contexto 2D do canvas.");
       requestAnimationFrame(detectAndDraw);
       return;
     }
@@ -79,7 +124,6 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
       drawingUtilsRef.current = new DrawingUtils(ctx);
     }
     const drawingUtils = drawingUtilsRef.current;
-
 
     let results: PoseLandmarkerResult | undefined = undefined;
 
@@ -97,14 +141,18 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
 
     // Desenha os landmarks, se existirem
     if (results && results.landmarks) {
+      const named = getNamedLandmarks3D(results);
       for (const landmark of results.landmarks) {
-        drawingUtils.drawLandmarks(landmark, { //
-          color: 'red',
-          lineWidth: 2
+        console.log(named);
+        drawingUtils.drawLandmarks(landmark, {
+          //
+          color: "yellow",
+          lineWidth: 2,
         });
-        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, { //
-          color: 'green',
-          lineWidth: 4
+        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
+          //
+          color: "green",
+          lineWidth: 4,
         });
       }
     }
@@ -123,19 +171,22 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
     const videoElement = videoRef.current;
     if (videoElement) {
       const startProcessing = () => {
-        console.log('Vídeo pronto, iniciando processamento de pose.');
+        console.log("Vídeo pronto, iniciando processamento de pose.");
         requestAnimationFrame(detectAndDraw);
       };
 
-      if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA ou HAVE_ENOUGH_DATA
+      if (videoElement.readyState >= 3) {
+        // HAVE_FUTURE_DATA ou HAVE_ENOUGH_DATA
         startProcessing();
       } else {
-        videoElement.addEventListener('canplay', startProcessing, { once: true });
+        videoElement.addEventListener("canplay", startProcessing, {
+          once: true,
+        });
       }
 
       // Cleanup para remover o listener se o componente desmontar antes do 'canplay'
       return () => {
-        videoElement.removeEventListener('canplay', startProcessing);
+        videoElement.removeEventListener("canplay", startProcessing);
         if (poseLandmarkerRef.current) {
           poseLandmarkerRef.current.close(); //
           poseLandmarkerRef.current = null;
@@ -149,21 +200,12 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
   }, [createLandmarker, detectAndDraw, videoRef]); // Dependências: createLandmarker, detectAndDraw, videoRef
 
   return (
-    <div style={{ position: 'relative', width: 640, height: 480 }}>
-      <h3>Processando Movimento...</h3>
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          border: '1px solid black'
-        }}
-      />
-    </div>
-  );
+    <Wrapper>
+      <CanvasWrapper>
+        <Canvas ref={canvasRef} />
+      </CanvasWrapper>
+    </Wrapper>
+);
 };
 
 export default PoseTracker;
