@@ -9,6 +9,7 @@ html, body, #root {
 .App {
   text-align: center;
   display: flex;
+  align-items: center;
   flex-direction: column;
   height: 100vh; /* Ocupa toda a altura da viewport */
 }
@@ -23,7 +24,7 @@ html, body, #root {
 main {
   flex: 1;
   display: flex;
-  width: 100%;
+  width: 70%;
   padding: 0; /* Removido padding */
   box-sizing: border-box;
   overflow: hidden; /* Impede scroll dentro do main */
