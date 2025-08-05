@@ -11,7 +11,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   flex-direction: column;
-  height: 100vh; /* Ocupa toda a altura da viewport */
+  height: 80vh; /* Ocupa toda a altura da viewport */
 }
 
 .App-header {
@@ -24,8 +24,6 @@ html, body, #root {
 main {
   flex: 1;
   display: flex;
-  width: 70%;
-  padding: 0; /* Removido padding */
-  box-sizing: border-box;
-  overflow: hidden; /* Impede scroll dentro do main */
+  flex-direction: column;
+  overflow: auto; /* permitir scroll quando a tabela cresce */
 }

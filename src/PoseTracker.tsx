@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback, useState } from "react";
 import {
   PoseLandmarker,
   FilesetResolver,
@@ -7,6 +7,7 @@ import {
 } from "@mediapipe/tasks-vision";
 import { getNamedLandmarks3D } from "./PositionLandMarks";
 import styled from "styled-components";
+import LandmarkTable, { LandmarkRow } from "./components/LandmarkTable";
 
 interface PoseTrackerProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -15,6 +16,11 @@ interface PoseTrackerProps {
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
+
+  @media (min-width: 768px) {
+    flex-direction: row; /* lado a lado em telas maiores */
+  }
+
   flex: 1;
   width: 100%;
   height: 100%;
@@ -25,19 +31,13 @@ const Wrapper = styled.div`
 const CanvasWrapper = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
-  background: #000;
-  margin: 0 auto;
-  max-width: 100%;
-  max-height: 100%;
-
-  /* Mantém a proporção 16:9 mas permite altura máxima */
+  max-width: 640px;
   aspect-ratio: 16/9;
+  background: #000;
 
-  @media (max-width: 768px) {
-    /* Em mobile, usa toda a altura disponível */
-    aspect-ratio: unset;
-    max-height: 85vh;
+  @media (min-width: 768px) {
+    height: auto;
+    max-height: none;
   }
 `;
 
@@ -61,6 +61,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
 
   const lastVideoTimeRef = useRef<number>(-1); // Para evitar processar o mesmo frame múltiplas vezes
 
+  const [landmarkData, setLandmarkData] = useState<LandmarkRow[]>([]);
   // Função para criar o PoseLandmarker
   const createLandmarker = useCallback(async () => {
     try {
@@ -141,21 +142,32 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
 
     // Desenha os landmarks, se existirem
     if (results && results.landmarks) {
-      const named = getNamedLandmarks3D(results);
-      for (const landmark of results.landmarks) {
-        console.log(named);
-        drawingUtils.drawLandmarks(landmark, {
-          //
-          color: "yellow",
-          lineWidth: 2,
-        });
-        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
-          //
-          color: "green",
-          lineWidth: 4,
-        });
+        const named = getNamedLandmarks3D(results);
+
+        // ✅ Gera um identificador de frame (timestamp ou contador)
+        const frameId = Math.floor(performance.now());
+
+        // ✅ Prepara os dados para a tabela
+        const landmarkWithFrame: LandmarkRow[] = named.map(l => ({
+          ...l,
+          frame: frameId
+        }));
+
+        // ✅ Atualiza o estado
+        setLandmarkData(landmarkWithFrame);
+
+        // ✅ Desenha os landmarks
+        for (const landmark of results.landmarks) {
+          drawingUtils.drawLandmarks(landmark, {
+            color: "yellow",
+            lineWidth: 2,
+          });
+          drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
+            color: "green",
+            lineWidth: 4,
+          });
+        }
       }
-    }
     ctx.restore();
 
     // Continua o loop de detecção
@@ -204,6 +216,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ videoRef }) => {
       <CanvasWrapper>
         <Canvas ref={canvasRef} />
       </CanvasWrapper>
+        <LandmarkTable data={landmarkData} />
     </Wrapper>
 );
 };
